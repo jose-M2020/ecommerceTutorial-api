@@ -49,7 +49,7 @@ const getRecommendedItems = async function(req,res){
 }
 
 const getFeaturedItems = async function(req,res){
-    let reg = await ProductoEtiqueta.find({etiqueta:"61a390d39b40d02e0cb9d789"}).populate('producto');
+    let reg = await ProductoEtiqueta.find({etiqueta:"639a8e1e7d732603c70431ed"}).populate('producto');
     res.status(200).send({data: reg});
 }
 
