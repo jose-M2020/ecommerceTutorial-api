@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const fs = require('fs');
 const routesPath = `${__dirname}/`;
-const { removeFileExtension } = require('../helpers/utils');
+const { removeFileExtension } = require('../utils/helpers');
 
 router.use('/', require('./auth'));
 

@@ -76,6 +76,11 @@ api.put('/:id/deleteImage',
 );
 
 api.get('/:id/inventario',
+    // verifyToken,
+    // roleAuthorization(['admin']),
+    controller.getInventarioByProduct
+);
+api.get('/inventario/all',
     verifyToken,
     roleAuthorization(['admin']),
     controller.getInventario

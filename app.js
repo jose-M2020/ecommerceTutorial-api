@@ -4,7 +4,7 @@ const bodyparser = require('body-parser');
 const mongoose = require('mongoose');
 const morgan = require('morgan');
 
-const { connectToDB } = require('./helpers/mongoose.js');
+const { connectToDB } = require('./utils/mongoose.js');
 const { PORT } = require('./config.js');
 
 const app = express();

@@ -1,9 +1,9 @@
 'use strict'
 
-var mongoose = require('mongoose');
-var Schema = mongoose.Schema;
+const mongoose = require('mongoose');
+const Schema = mongoose.Schema;
 
-var VentaSchema = Schema({
+const VentaSchema = Schema({
     cliente: {type: Schema.ObjectId, ref: 'cliente', required: true},
     subtotal: {type: Number, require: true},
     total_pagar: {type: Number, require: true},

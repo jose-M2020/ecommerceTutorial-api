@@ -1,17 +1,29 @@
 const Carrito = require('../models/Carrito');
-const Variedad = require('../models/Variedad');
+const Inventario = require('../models/Inventario');
 
 const addItem = async function(req,res){
     if(req.user){
-        let data = req.body;
+        const data = req.body;
+        const cartFound = await Carrito.findOne({inventario: data.inventario});
 
-        let variedad = await Variedad.findById({_id:data.variedad});
+        const inventario = await Inventario.findById({_id:data.inventario});
+        
+        const cantidadTotal = cartFound ? (data.cantidad + cartFound.cantidad) : (data.cantidad)
+        
+        if(cantidadTotal > inventario.cantidad){
+          return res.status(200).send({data:undefined,message: 'Stock insuficiente, ingrese otra cantidad'});
+        }
 
-        if(data.cantidad <= variedad.stock){
-            let reg = await Carrito.create(data);
-            res.status(200).send({data:reg});
+        if(cartFound){
+          let reg = await Carrito.findByIdAndUpdate(
+            {_id: cartFound._id},
+            {cantidad: cantidadTotal}
+          );
+
+          res.status(200).send({data:reg});
         }else{
-            res.status(200).send({data:undefined,message: 'Stock insuficiente, ingrese otra cantidad'});
+          let reg = await Carrito.create(data);
+          res.status(200).send({data:reg});
         }
 
     }else{
@@ -23,7 +35,12 @@ const getItemsByClient = async function(req,res){
     if(req.user){
         let id = req.params['id'];
 
-        let carrito_cliente = await Carrito.find({cliente:id}).populate('producto').populate('variedad');
+        let carrito_cliente = await Carrito.find({cliente:id})
+                                           .populate('producto')
+                                           .populate({
+                                                path: 'inventario',
+                                                populate: { path: 'variedad'}
+                                            });
         res.status(200).send({data:carrito_cliente});
     }else{
         res.status(500).send({message: 'NoAccess'});
@@ -49,10 +66,10 @@ const checkItems = async function(req,res){
             let producto_sl = '';
 
             for(var item of detalles){
-                let variedad = await Variedad.findById({_id:item.variedad}).populate('producto');
-                if(variedad.stock < item.cantidad){
+                let inventario = await Inventario.findById({_id:item.inventario}).populate('producto');
+                if(inventario.cantidad < item.cantidad){
                     access = true;
-                    producto_sl = variedad.producto.titulo;
+                    producto_sl = inventario.producto.titulo;
                 }
             }
 

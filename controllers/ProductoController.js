@@ -2,7 +2,7 @@ const Producto = require('../models/Producto');
 const Variedad = require('../models/Variedad');
 const Inventario = require('../models/Inventario');
 const ProductoEtiqueta = require('../models/Producto_etiqueta');
-const {uploadImage, removeImage} = require('../helpers/cloudinary.js');
+const {uploadImage, removeImage} = require('../utils/cloudinary.js');
 
 const fs = require('fs-extra');
 const path = require('path');
@@ -164,7 +164,8 @@ const updateItem = async function(req,res){
         categoria: data.categoria,
         visibilidad: data.visibilidad,
         descripcion: data.descripcion,
-        contenido:data.contenido
+        contenido:data.contenido,
+        genero:data.genero
       }
       
       if (req?.files) {
@@ -298,14 +299,27 @@ const addEtiqueta = async function(req,res){
 }
 
 const getInventario = async function(req,res){
+    console.log('data');
     if(req.user){
+        const data = await Inventario.find()
+                                     .populate('variedad')
+                                     .populate('producto');
+                                     
+        res.status(200).send({data});
+    }else{
+        res.status(500).send({message: 'NoAccess'});
+    }
+}
+
+const getInventarioByProduct = async function(req,res){
+    // if(req.user){
         var id = req.params['id'];
 
         var reg = await Inventario.find({producto: id}).populate('variedad').sort({createdAt:-1});
         res.status(200).send({data:reg});
-    }else{
-        res.status(500).send({message: 'NoAccess'});
-    }
+    // }else{
+    //     res.status(500).send({message: 'NoAccess'});
+    // }
 }
 
 const addInventario = async function(req,res){
@@ -362,5 +376,6 @@ module.exports = {
   changeStatus,
 
   getInventario,
+  getInventarioByProduct,
   addInventario
 }

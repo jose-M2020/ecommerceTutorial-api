@@ -18,6 +18,7 @@ var ProductoSchema = Schema({
     sku: {type: String, required: true},
     descripcion: {type: String, required: true},
     contenido: {type: String, required: true},
+    genero: {type: String, required: true},
     nventas: {type: Number, default: 0, required: true},
     categoria: {type: String, required: true},
     visibilidad: {type: String, required: true},

@@ -2,7 +2,7 @@ const Admin = require('../models/Admin');
 const Cliente = require('../models/Cliente');
 const Carrito = require('../models/Carrito');
 const bcrypt = require('bcrypt-nodejs');
-const jwt = require('../helpers/jwt');
+const jwt = require('../utils/jwt');
 
 const register = async function(req,res){
     const data = req.body;

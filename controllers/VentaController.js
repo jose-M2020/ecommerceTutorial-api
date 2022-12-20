@@ -1,14 +1,16 @@
+const handlebars = require('handlebars');
+const ejs = require('ejs');
+
 const Venta = require('../models/Venta');
 const Dventa = require('../models/Dventa');
 const Producto = require('../models/Producto');
-const Variedad = require('../models/Variedad');
+const Inventario = require('../models/Inventario');
 const Carrito = require('../models/Carrito');
 
-const fs = require('fs');
-const handlebars = require('handlebars');
-const ejs = require('ejs');
-const nodemailer = require('nodemailer');
-const smtpTransport = require('nodemailer-smtp-transport');
+const { readHTMLFile } = require('../utils/helpers');
+const sendEmail = require('../utils/email');
+
+const storeLink = 'http://localhost:4300/';
 
 const getItemsByClient  = async function(req,res){
     if(req.user){
@@ -25,8 +27,15 @@ const getItemDetails  = async function(req,res){
         const id = req.params['id'];
         
         try {
-            let venta = await Venta.findById({_id:id}).populate('direccion').populate('cliente');
-            let detalles = await Dventa.find({venta:venta._id}).populate('producto').populate('variedad');
+            let venta = await Venta.findOne({_id: id, cliente: req.user.sub})
+                                   .populate('direccion')
+                                   .populate('cliente');
+            let detalles = await Dventa.find({venta:venta?._id})
+                                       .populate('producto')
+                                       .populate({
+                                          path: 'inventario',
+                                          populate: { path: 'variedad'}
+                                        });
             res.status(200).send({data:venta,detalles:detalles});
 
         } catch (error) {
@@ -57,16 +66,16 @@ const addItem = async function(req,res){
             let new_stock = element_producto.stock - element.cantidad;
             let new_ventas = element_producto.nventas + 1;
 
-            let element_variedad = await Variedad.findById({_id:element.variedad});
-            let new_stock_variedad = element_variedad.stock - element.cantidad;
+            let element_inventario = await Inventario.findById({_id:element.inventario});
+            let new_stock_inventario = element_inventario.cantidad - element.cantidad;
 
             await Producto.findByIdAndUpdate({_id: element.producto},{
                 stock: new_stock,
                 nventas: new_ventas
             });
 
-            await Variedad.findByIdAndUpdate({_id: element.variedad},{
-                stock: new_stock_variedad,
+            await Inventario.findByIdAndUpdate({_id: element.inventario},{
+                cantidad: new_stock_inventario,
             });
 
             //limpiar carrito
@@ -91,60 +100,6 @@ const consultarIDPago = async function(req,res){
     }
 }
 
-// const enviar_orden_compra = async function(venta){
-//     try {
-//         var readHTMLFile = function(path, callback) {
-//             fs.readFile(path, {encoding: 'utf-8'}, function (err, html) {
-//                 if (err) {
-//                     throw err;
-//                     callback(err);
-//                 }
-//                 else {
-//                     callback(null, html);
-//                 }
-//             });
-//         };
-    
-//         var transporter = nodemailer.createTransport(smtpTransport({
-//             service: 'gmail',
-//             host: 'smtp.gmail.com',
-//             auth: {
-//                 user: 'mextech.business@gmail.com',
-//                 pass: '8sep2000'
-//             }
-//         }));
-    
-     
-//         var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-//         var dventa = await Dventa.find({venta:venta}).populate('producto').populate('variedad');
-    
-    
-//         readHTMLFile(process.cwd() + '/mails/email_compra.html', (err, html)=>{
-                                
-//             let rest_html = ejs.render(html, {orden: orden, dventa:dventa});
-    
-//             var template = handlebars.compile(rest_html);
-//             var htmlToSend = template({op:true});
-    
-//             var mailOptions = {
-//                 from: 'mextech.business@gmail.com',
-//                 to: orden.cliente.email,
-//                 subject: 'Confirmación de compra ' + orden._id,
-//                 html: htmlToSend
-//             };
-          
-//             transporter.sendMail(mailOptions, function(error, info){
-//                 if (!error) {
-//                     console.log('Email sent: ' + info.response);
-//                 }
-//             });
-        
-//         });
-//     } catch (error) {
-//         console.log(error);
-//     }
-// } 
-
 const newOrder = async function(req,res){
     if(req.user){
         try {
@@ -154,10 +109,10 @@ const newOrder = async function(req,res){
             let producto_sl = '';
 
             for(var item of detalles){
-                let variedad = await Variedad.findById({_id:item.variedad}).populate('producto');
-                if(variedad.stock < item.cantidad){
+                let inventario = await Inventario.findById({_id:item.inventario}).populate('producto');
+                if(inventario.cantidad < item.cantidad){
                     access = true;
-                    producto_sl = variedad.producto.titulo;
+                    producto_sl = inventario.producto.titulo;
                 }
             }
 
@@ -206,7 +161,12 @@ const getItem  = async function(req,res){
 
         try {
             let venta = await Venta.findById({_id:id}).populate('direccion').populate('cliente');
-            let detalles = await Dventa.find({venta:venta._id}).populate('producto').populate('variedad');
+            let detalles = await Dventa.find({venta:venta._id})
+                                       .populate('producto')
+                                       .populate({
+                                          path: 'inventario',
+                                          populate: { path: 'variedad'}
+                                        });
             res.status(200).send({data:venta,detalles:detalles});
 
         } catch (error) {
@@ -286,16 +246,16 @@ const confirmPayment = async function(req,res){
             let new_stock = element_producto.stock - element.cantidad;
             let new_ventas = element_producto.nventas + 1;
 
-            let element_variedad = await Variedad.findById({_id:element.variedad});
-            let new_stock_variedad = element_variedad.stock - element.cantidad;
+            let element_inventario = await Inventario.findById({_id:element.inventario});
+            let new_stock_inventario = element_inventario.cantidad - element.cantidad;
 
             await Producto.findByIdAndUpdate({_id: element.producto},{
                 stock: new_stock,
                 nventas: new_ventas
             });
 
-            await Variedad.findByIdAndUpdate({_id: element.variedad},{
-                stock: new_stock_variedad,
+            await Inventario.findByIdAndUpdate({_id: element.inventario},{
+                cantidad: new_stock_inventario,
             });
         }
 
@@ -312,8 +272,6 @@ const addItemManual = async function(req,res){
         var detalles = data.detalles;
 
         data.estado = 'Procesando';
-        
-        console.log(data);
 
         let venta = await Venta.create(data);
 
@@ -325,17 +283,17 @@ const addItemManual = async function(req,res){
             let element_producto = await Producto.findById({_id:element.producto});
             let new_stock = element_producto.stock - element.cantidad;
             let new_ventas = element_producto.nventas + 1;
-
-            let element_variedad = await Variedad.findById({_id:element.variedad});
-            let new_stock_variedad = element_variedad.stock - element.cantidad;
+            
+            let ilement_Inventario = await Inventario.findById({_id:element.inventario});
+            let new_stock_Inventario = ilement_Inventario.cantidad - element.cantidad;
 
             await Producto.findByIdAndUpdate({_id: element.producto},{
                 stock: new_stock,
                 nventas: new_ventas
             });
 
-            await Variedad.findByIdAndUpdate({_id: element.variedad},{
-                stock: new_stock_variedad,
+            await Inventario.findByIdAndUpdate({_id: element.inventario},{
+                cantidad: new_stock_Inventario,
             });
         }
 
@@ -489,58 +447,24 @@ const getbestSellingProducts = async () => {
     
 }
 
-// TODO: Verify if the email is sent correctly
-
 // SEND EMAIL
 // -------------------------------------------
 
 const enviar_email_pedido_compra = async function(venta){
     try {
-        var readHTMLFile = function(path, callback) {
-            fs.readFile(path, {encoding: 'utf-8'}, function (err, html) {
-                if (err) {
-                    throw err;
-                    callback(err);
-                }
-                else {
-                    callback(null, html);
-                }
-            });
-        };
-    
-        var transporter = nodemailer.createTransport(smtpTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
-            auth: {
-                user: 'mextech.business@gmail.com',
-                pass: '8sep2000'
-            }
-        }));
-    
-     
         var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('variedad');
+        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
     
-    
-        readHTMLFile(process.cwd() + '/mails/email_pedido.html', (err, html)=>{
-                                
-            let rest_html = ejs.render(html, {orden: orden, dventa:dventa});
-    
+        readHTMLFile(process.cwd() + '/mails/email_pedido.html', (err, html)=>{                  
+            let rest_html = ejs.render(html, { orden, dventa, storeLink });
             var template = handlebars.compile(rest_html);
             var htmlToSend = template({op:true});
-    
-            var mailOptions = {
-                from: 'mextech.business@gmail.com',
+
+            sendEmail({
                 to: orden.cliente.email,
                 subject: 'Gracias por tu orden, Prágol.',
                 html: htmlToSend
-            };
-          
-            transporter.sendMail(mailOptions, function(error, info){
-                if (!error) {
-                    console.log('Email sent: ' + info.response);
-                }
-            });
+            })
         
         });
     } catch (error) {
@@ -550,51 +474,19 @@ const enviar_email_pedido_compra = async function(venta){
 
 const mail_confirmar_envio = async function(venta){
     try {
-        var readHTMLFile = function(path, callback) {
-            fs.readFile(path, {encoding: 'utf-8'}, function (err, html) {
-                if (err) {
-                    throw err;
-                    callback(err);
-                }
-                else {
-                    callback(null, html);
-                }
-            });
-        };
-    
-        var transporter = nodemailer.createTransport(smtpTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
-            auth: {
-                user: 'mextech.business@gmail.com',
-                pass: '8sep2000'
-            }
-        }));
-    
-     
         var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('variedad');
-    
-    
+        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
+
         readHTMLFile(process.cwd() + '/mails/email_enviado.html', (err, html)=>{
-                                
-            let rest_html = ejs.render(html, {orden: orden, dventa:dventa});
-    
+            let rest_html = ejs.render(html, { orden, dventa, storeLink });
             var template = handlebars.compile(rest_html);
             var htmlToSend = template({op:true});
-    
-            var mailOptions = {
-                from: 'mextech.business@gmail.com',
+          
+            sendEmail({
                 to: orden.cliente.email,
                 subject: 'Tu pedido ' + orden._id + ' fué enviado',
                 html: htmlToSend
-            };
-          
-            transporter.sendMail(mailOptions, function(error, info){
-                if (!error) {
-                    console.log('Email sent: ' + info.response);
-                }
-            });
+            })
         
         });
     } catch (error) {
@@ -604,52 +496,19 @@ const mail_confirmar_envio = async function(venta){
 
 const enviar_orden_compra = async function(venta){
     try {
-        var readHTMLFile = function(path, callback) {
-            fs.readFile(path, {encoding: 'utf-8'}, function (err, html) {
-                if (err) {
-                    throw err;
-                    callback(err);
-                }
-                else {
-                    callback(null, html);
-                }
-            });
-        };
-    
-        var transporter = nodemailer.createTransport(smtpTransport({
-            service: 'gmail',
-            host: 'smtp.gmail.com',
-            auth: {
-                user: 'mextech.business@gmail.com',
-                pass: '8sep2000'
-            }
-        }));
-    
-     
         var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('variedad');
+        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
     
-    
-        readHTMLFile(process.cwd() + '/mails/email_compra.html', (err, html)=>{
-                                
-            let rest_html = ejs.render(html, {orden: orden, dventa:dventa});
-    
+        readHTMLFile(process.cwd() + '/mails/email_compra.html', (err, html)=>{                                
+            let rest_html = ejs.render(html, { orden, dventa, storeLink });
             var template = handlebars.compile(rest_html);
             var htmlToSend = template({op:true});
-    
-            var mailOptions = {
-                from: 'mextech.business@gmail.com',
+            
+            sendEmail({
                 to: orden.cliente.email,
                 subject: 'Confirmación de compra ' + orden._id,
                 html: htmlToSend
-            };
-          
-            transporter.sendMail(mailOptions, function(error, info){
-                if (!error) {
-                    console.log('Email sent: ' + info.response);
-                }
-            });
-        
+            })
         });
     } catch (error) {
         console.log(error);
@@ -670,5 +529,5 @@ module.exports = {
   setShipped,
   confirmPayment,
   addItemManual,
-  kpi
+  kpi,
 }
