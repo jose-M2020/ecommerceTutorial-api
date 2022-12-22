@@ -1,4 +1,7 @@
+const fs = require('fs-extra');
+
 const Config = require('../models/Config');
+const { removeImage, uploadImage } = require('../utils/cloudinary');
 
 const getConfig = async (req,res)=>{
     let config = await Config.findById({_id:'639727cc3535389ed7beec58'});
@@ -8,11 +11,28 @@ const getConfig = async (req,res)=>{
 const updateConfig = async (req,res)=>{
     if(req.user){
         let data = req.body;
-        let config = await Config.findByIdAndUpdate({_id:'639727cc3535389ed7beec58'},{
-            envio_activacion : data.envio_activacion,
-            monto_min_mexicanos: data.monto_min_mexicanos,
-            monto_min_dolares : data.monto_min_dolares
-        });
+        data.envio = JSON.parse(data?.envio);
+        data.categorias = JSON.parse(data?.categorias);
+        data.logo = JSON.parse(data?.logo);
+        
+        if(req?.files) {
+            try {
+              await removeImage(data?.logo?.public_id);
+              const result = await uploadImage(req.files.file.tempFilePath)
+              
+              data.logo = {
+                  name: req.files.file.name,
+                  public_id: result.public_id,
+                  secure_url: result.secure_url
+              }
+
+              await fs.unlink(req.files.file.tempFilePath)  
+            } catch (error) {
+              console.log(error);
+            }
+        }
+        
+        const config = await Config.findByIdAndUpdate({_id:'639727cc3535389ed7beec58'}, data);
         res.status(200).send({data:config});
     }else{
         res.status(500).send({message: 'NoAccess'});

@@ -9,6 +9,7 @@ const Carrito = require('../models/Carrito');
 
 const { readHTMLFile } = require('../utils/helpers');
 const sendEmail = require('../utils/email');
+const Config = require('../models/Config');
 
 const storeLink = 'http://localhost:4300/';
 
@@ -452,13 +453,20 @@ const getbestSellingProducts = async () => {
 
 const enviar_email_pedido_compra = async function(venta){
     try {
-        var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
-    
+        const orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
+        const dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
+        const { logo: {secure_url} } = await Config.findOne();
+        
         readHTMLFile(process.cwd() + '/mails/email_pedido.html', (err, html)=>{                  
-            let rest_html = ejs.render(html, { orden, dventa, storeLink });
-            var template = handlebars.compile(rest_html);
-            var htmlToSend = template({op:true});
+            const rest_html = ejs.render(html, { 
+                orden,
+                dventa,
+                storeLink,
+                logo: secure_url 
+            });
+
+            const template = handlebars.compile(rest_html);
+            const htmlToSend = template({op:true});
 
             sendEmail({
                 to: orden.cliente.email,
@@ -474,13 +482,20 @@ const enviar_email_pedido_compra = async function(venta){
 
 const mail_confirmar_envio = async function(venta){
     try {
-        var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
+        const orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
+        const dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
+        const { logo: {secure_url} } = await Config.findOne();
 
         readHTMLFile(process.cwd() + '/mails/email_enviado.html', (err, html)=>{
-            let rest_html = ejs.render(html, { orden, dventa, storeLink });
-            var template = handlebars.compile(rest_html);
-            var htmlToSend = template({op:true});
+            const rest_html = ejs.render(html, { 
+                orden,
+                dventa,
+                storeLink,
+                logo: secure_url 
+            });
+
+            const template = handlebars.compile(rest_html);
+            const htmlToSend = template({op:true});
           
             sendEmail({
                 to: orden.cliente.email,
@@ -496,13 +511,19 @@ const mail_confirmar_envio = async function(venta){
 
 const enviar_orden_compra = async function(venta){
     try {
-        var orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
-        var dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
-    
+        const orden = await Venta.findById({_id:venta}).populate('cliente').populate('direccion');
+        const dventa = await Dventa.find({venta:venta}).populate('producto').populate('inventario');
+        const { logo: {secure_url} } = await Config.findOne();
+
         readHTMLFile(process.cwd() + '/mails/email_compra.html', (err, html)=>{                                
-            let rest_html = ejs.render(html, { orden, dventa, storeLink });
-            var template = handlebars.compile(rest_html);
-            var htmlToSend = template({op:true});
+            const rest_html = ejs.render(html, { 
+                orden,
+                dventa,
+                storeLink,
+                logo: secure_url 
+            });
+            const template = handlebars.compile(rest_html);
+            const htmlToSend = template({op:true});
             
             sendEmail({
                 to: orden.cliente.email,

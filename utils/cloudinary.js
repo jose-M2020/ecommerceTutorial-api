@@ -15,5 +15,7 @@ exports.uploadImage = async (filePath) => {
 }
 
 exports.removeImage = async (publicId) => {
-  return await cloudinary.uploader.destroy(publicId)
+  if(publicId){
+    return await cloudinary.uploader.destroy(publicId)
+  }
 }
