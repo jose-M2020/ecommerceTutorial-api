@@ -1,5 +1,6 @@
 const handlebars = require('handlebars');
 const ejs = require('ejs');
+require('dotenv').config()
 
 const Venta = require('../models/Venta');
 const Dventa = require('../models/Dventa');
@@ -10,8 +11,6 @@ const Carrito = require('../models/Carrito');
 const { readHTMLFile } = require('../utils/helpers');
 const sendEmail = require('../utils/email');
 const Config = require('../models/Config');
-
-const storeLink = 'http://localhost:4300/';
 
 const getItemsByClient  = async function(req,res){
     if(req.user){
@@ -469,7 +468,7 @@ const enviar_email_pedido_compra = async function(venta){
             const rest_html = ejs.render(html, { 
                 orden,
                 dventa,
-                storeLink,
+                storeLink: process.env['STORE_URL'],
                 logo: secure_url 
             });
 
@@ -498,7 +497,7 @@ const mail_confirmar_envio = async function(venta){
             const rest_html = ejs.render(html, { 
                 orden,
                 dventa,
-                storeLink,
+                storeLink: process.env['STORE_URL'],
                 logo: secure_url 
             });
 
@@ -527,7 +526,7 @@ const enviar_orden_compra = async function(venta){
             const rest_html = ejs.render(html, { 
                 orden,
                 dventa,
-                storeLink,
+                storeLink: process.env['STORE_URL'],
                 logo: secure_url 
             });
             const template = handlebars.compile(rest_html);
