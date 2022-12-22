@@ -26,9 +26,17 @@ const getItemsByClient  = async function(req,res){
 const getItemDetails  = async function(req,res){
     if(req.user){
         const id = req.params['id'];
-        
+        let filters = { _id: id };
+
         try {
-            let venta = await Venta.findOne({_id: id, cliente: req.user.sub})
+            if(req.user?.rol !== 'admin') {
+                filters = {
+                    ...filters,
+                    cliente: req.user.sub
+                }
+            }
+
+            let venta = await Venta.findOne(filters)
                                    .populate('direccion')
                                    .populate('cliente');
             let detalles = await Dventa.find({venta:venta?._id})
