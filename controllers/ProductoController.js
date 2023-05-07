@@ -6,19 +6,24 @@ const {uploadImage, removeImage} = require('../utils/cloudinary.js');
 
 const fs = require('fs-extra');
 const path = require('path');
+const { delay } = require('../utils/helpers');
+const Review = require('../models/Review');
 
 const getPublicItems = async function(req,res){
     let data = [];
-    let reg = await Producto.find({estado:'Publicado'}).sort({createdAt:-1});
+    const reg = await Producto.find({estado:'Publicado'}).sort({createdAt:-1});
 
     for(var item of reg){
-        let variedades = await Variedad.find({producto:item._id});
+        const variedades = await Variedad.find({ producto: item._id });
+        const review = await Review.find({ producto: item._id });
+
         data.push({
             producto: item,
-            variedades: variedades
+            variedades,
+            review
         });
     }
-
+    // await delay(5000)
     res.status(200).send({data});
 }
 
@@ -43,9 +48,20 @@ const getItemBySlug = async function(req,res){
 }
 
 const getRecommendedItems = async function(req,res){
-    var categoria = req.params['categoria'];
-    let reg = await Producto.find({categoria: categoria,estado:'Publicado'}).sort({createdAt:-1}).limit(8);
-    res.status(200).send({data: reg});
+    const categoria = req.params['categoria'];
+    const reg = await Producto.find({categoria: categoria,estado:'Publicado'}).sort({createdAt:-1}).limit(8);
+    const data = [];
+
+    for(var producto of reg){
+      const review = await Review.find({ producto: producto._id });
+
+      data.push({
+          producto,
+          review
+      });
+    }
+    
+    res.status(200).send({data});
 }
 
 const getFeaturedItems = async function(req,res){
@@ -54,8 +70,19 @@ const getFeaturedItems = async function(req,res){
 }
 
 const getNewItems = async function(req,res){
-    let reg = await Producto.find({estado: 'Publicado'}).sort({createdAt:-1}).limit(8);
-    res.status(200).send({data: reg});
+    const reg = await Producto.find({estado: 'Publicado'}).sort({createdAt:-1}).limit(8);
+    const data = [];
+
+    for(var producto of reg){
+      const review = await Review.find({ producto: producto._id });
+
+      data.push({
+          producto,
+          review
+      });
+    }
+
+    res.status(200).send({data});
 }
 
 const getImgCover = async function(req,res){

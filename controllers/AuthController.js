@@ -40,21 +40,29 @@ const login = async function(req,res){
             return res.status(200).send({message: 'La contraseña no coincide', data: undefined}); 
         }
 
-        if(data.carrito.length >= 1){
+        try {
+          if(data.carrito.length >= 1){
             for(var item of data.carrito){
                 await Carrito.create({
                     cantidad:item.cantidad,
                     producto:item.producto._id,
-                    variedad:item.variedad.id,
+                    inventario:item.variedad.id,
                     cliente:userFound._id
                 });
             }
-        }
+          }
 
-        res.status(200).send({
+          res.status(200).send({
             data:userFound,
             token: jwt.createToken(userFound)
-        });
+          });
+        } catch (error) {
+          res.status(200).send({
+            data:userFound,
+            token: jwt.createToken(userFound),
+            message: 'Tu sesión se ha iniciado correctamente, pero lamentablemente no se pudieron guardar los productos de tu carrito.'
+          }); 
+        }
     });
 }
 
